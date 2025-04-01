@@ -1,46 +1,62 @@
-# Projet Correction Automatique - PoC
+# Projet Coursero – Correction Automatique d’Exercices (PoC)
 
-Plateforme web pour :
-- Connexion étudiant
-- Dépôt d'exercices (Python/C)
-- Stockage des soumissions
-- Interface de suivi
+## 1. Contexte du projet
 
-⚠️ Scripts de correction automatisée seront ajoutés plus tard.
----
+Plateforme web permettant aux étudiants de déposer, suivre et évaluer automatiquement des exercices de programmation.
 
-### 5️⃣ Initialise ton dépôt Git local et pousse vers GitHub
-git init
-git add .
-git commit -m "Version initiale du site étudiant"
-git remote add origin https://github.com/TON_UTILISATEUR/infra-poc-correction.git
-git branch -M main
-git push -u origin main
----
+Objectifs :
+- Proposer une interface de connexion pour les étudiants.
+- Permettre le dépôt de fichiers d’exercices (langages : Python, C).
+- Stocker et organiser les soumissions.
+- Offrir une interface de suivi des dépôts et des résultats de correction.
+- Intégrer une base pour de futurs outils de correction automatique.
 
-## ✅ Résultat : sur GitHub
+## 2. Fonctionnalités
 
-Sur ton dépôt, tu dois voir :
-public/
-→ Tous tes fichiers PHP
-.gitignore
-README.md
-Et le dossier `uploads/` ne sera **pas du tout versionné 👍**
+### 2.1 - Gestion des utilisateurs
+Connexion via login/mot de passe.
+Interface de session pour les étudiants.
 
----
+### 2.2 - Dépôt de fichiers
+Envoi d’exercices au format .py, .c, etc.
+Organisation des fichiers par étudiant et par exercice.
 
-👉 Tu pourras plus tard ajouter :
-- un dossier `correction-scripts/` ou `workers/` pour tes scripts Python / bash de correction
-- une base de référence (ex: `reference_outputs/`)
-- un fichier `.env.example` pour montrer la config
+### 2.3 - Suivi des soumissions
+Vue des fichiers soumis par exercice.
+Informations de date/heure, statut de l’évaluation.
 
----
+### 2.4 - Moteur de correction
+Les fichiers exécutables peuvent être testés via des scripts (modulable).
+Évaluation simple par compilation/exécution et affichage du résultat.
 
-## 🔒 Conseils si tu travailles à plusieurs :
+## 3. Guide d'installation
 
-Tu pourras plus tard ajouter :
-- un petit fichier `config.php` (non tracké) pour centraliser les accès BDD
-- des clés d’API ou Jeton CSRF (si évolutions prévues)
-- des branches pour staging / production
+### 3.1 - Prérequis
+Serveur web local (Apache recommandé)
+PHP ≥ 7.4
+MySQL / MariaDB
 
----
+### 3.2 - Installation
+1. Cloner le dépôt
+2. Importer la base de données via le fichier config.sql disponible.
+3. Configurer vos identifiants MySQL dans le fichier config.php (non inclus ici).
+4. Lancer le projet
+
+### 3.3 - Tests
+Accédez à http://localhost/coursero/ via un navigateur.
+Créez un compte étudiant manuellement dans la base de données ou via interface si disponible.
+
+## Technologies utilisées
+* Frontend : HTML / CSS / JavaScript
+* Backend : PHP
+* Base de données : MySQL
+* Langages pour les exercices : Python, C
+
+## 5. Authors
+
+* **Melvin Cureau** - [MelvinCureau](https://github.com/MelvinCr1)
+* **Tommy Brisset** - [TommyBrisset](https://github.com/TommyBRISSET)
+
+## 6. Licence
+
+Ce projet est sous licence MIT. Consultez le fichier LICENSE pour plus de détails.
