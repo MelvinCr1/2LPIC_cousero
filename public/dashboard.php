@@ -68,9 +68,9 @@ if (!isset($_SESSION['etudiant_id'])) {
     <p>ID de session : <strong><?php echo $_SESSION['etudiant_id']; ?></strong></p>
 
     <div class="actions">
-        <a href="upload.php">⬆️ Déposer un fichier</a>
-        <a href="change_password.php">🔐 Changer mon mot de passe</a>
-        <a href="logout.php" class="logout">🚪 Se déconnecter</a>
+        <a href="upload.php">Déposer un fichier</a>
+        <a href="change_password.php">Changer mon mot de passe</a>
+        <a href="logout.php" class="logout">Se déconnecter</a>
     </div>
 </div>
 
