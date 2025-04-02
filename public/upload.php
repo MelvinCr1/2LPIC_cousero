@@ -1,9 +1,9 @@
 <?php
 session_start();
-if (!isset($_SESSION['etudiant_id'])) {
-    header("Location: login.php?error=Veuillez vous connecter.");
-    exit();
-}
+//if (!isset($_SESSION['etudiant_id'])) {
+//    header("Location: login.php?error=Veuillez vous connecter.");
+//    exit();
+//}
 
 $message = $_GET['message'] ?? '';
 ?>
@@ -99,7 +99,7 @@ $message = $_GET['message'] ?? '';
         <label for="codefile">Fichier à envoyer :</label>
         <input type="file" name="codefile" accept=".py,.c" required>
 
-        <button type="submit">📤 Envoyer</button>
+        <button type="submit">Envoyer</button>
     </form>
 
     <a href="dashboard.php">⬅ Retour au tableau de bord</a>

@@ -1,9 +1,9 @@
 <?php
 session_start();
-if (isset($_SESSION['etudiant_id'])) {
-    header('Location: dashboard.php');
-    exit();
-}
+//if (isset($_SESSION['etudiant_id'])) {
+//    header('Location: dashboard.php');
+//    exit();
+//}
 $message = $_GET['error'] ?? $_GET['message'] ?? '';
 ?>
 

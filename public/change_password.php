@@ -1,9 +1,9 @@
 <?php
 session_start();
-if (!isset($_SESSION['etudiant_id'])) {
-    header("Location: login.php?error=Veuillez vous connecter.");
-    exit();
-}
+//if (!isset($_SESSION['etudiant_id'])) {
+//    header("Location: login.php?error=Veuillez vous connecter.");
+//    exit();
+//}
 
 $message = "";
 
@@ -14,9 +14,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $confirmation = trim($_POST['confirmation'] ?? '');
 
     if ($ancien === '' || $nouveau === '' || $confirmation === '') {
-        $message = "❌ Tous les champs sont obligatoires.";
+        $message = "Tous les champs sont obligatoires.";
     } elseif ($nouveau !== $confirmation) {
-        $message = "❌ Les nouveaux mots de passe ne correspondent pas.";
+        $message = "Les nouveaux mots de passe ne correspondent pas.";
     } else {
         $conn = new mysqli("192.168.146.103", "webuser", "webpassword", "corrections");
 
@@ -34,13 +34,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $update = $conn->prepare("UPDATE etudiants SET password = PASSWORD(?) WHERE id = ?");
             $update->bind_param("si", $nouveau, $etudiant_id);
             if ($update->execute()) {
-                $message = "✅ Mot de passe modifié avec succès.";
+                $message = "Mot de passe modifié avec succès.";
             } else {
-                $message = "❌ Erreur lors de la mise à jour.";
+                $message = "Erreur lors de la mise à jour.";
             }
             $update->close();
         } else {
-            $message = "❌ Ancien mot de passe incorrect.";
+            $message = "Ancien mot de passe incorrect.";
         }
 
         $conn->close();

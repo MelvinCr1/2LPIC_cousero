@@ -1,123 +1,112 @@
 #!/bin/bash
 
-# === PARAMÈTRES DE CONFIGURATION ===
+set -e
+
+# === CONFIGURATION ===
 UPLOAD_DIR="/var/www/html/uploads"
 REF_DIR="/var/www/html/reference_outputs"
-TMP_DIR="/tmp/worker"
-LOG_FILE="/var/log/worker.log"
-
 DB_HOST="192.168.146.103"
 DB_USER="webuser"
 DB_PASS="webpassword"
-DB_NAME="coursero"
+DB_NAME="corrections"
+LOG_FILE="/var/log/worker.log"
 
-# === PRÉREQUIS : packages nécessaires ===
-REQUIRED_CMDS=("mysql" "diff" "timeout" "gcc" "python3")
-for cmd in "${REQUIRED_CMDS[@]}"; do
-    command -v $cmd >/dev/null || { echo "$cmd manquant."; exit 1; }
-done
+# === PRÉVENIR LES EXÉCUTIONS CONCURRENTES ===
+LOCK_FILE="/tmp/worker.lock"
+if [ -f "$LOCK_FILE" ]; then
+    echo "$(date "+%F %T") Worker déjà en cours" >> "$LOG_FILE"
+    exit 1
+fi
+touch "$LOCK_FILE"
+trap "rm -f $LOCK_FILE" EXIT
 
-# === NETTOYAGE ET PRÉPARATION ===
-mkdir -p "$TMP_DIR"
-echo "🕑 $(date) - Lancement du worker" >> "$LOG_FILE"
+# === CRÉER RÉPERTOIRE TEMPORAIRE DE TRAVAIL ===
+TMP_BASE="/tmp/worker"
+mkdir -p "$TMP_BASE"
 
-# === RÉCUPÉRER LES SOUMISSIONS EN ATTENTE ===
-queries=$(mysql -N -u"$DB_USER" -p"$DB_PASS" -h"$DB_HOST" "$DB_NAME" -e "SELECT id, filename, exercise, language FROM submissions WHERE status = 'en_attente'")
+# === EXTRAIRE LES SOUMISSIONS EN ATTENTE ===
+soumissions=$(mysql -u"$DB_USER" -p"$DB_PASS" -h"$DB_HOST" -N -e \
+"SELECT id, filename, exercise, language FROM $DB_NAME.submissions WHERE status = 'en_attente'" | tr '\t' '|')
 
 IFS=$'\n'
-for ligne in $queries; do
-    id=$(echo $ligne | awk '{print $1}')
-    filename=$(echo $ligne | awk '{print $2}')
-    exercise=$(echo $ligne | awk '{print $3}')
-    language=$(echo $ligne | awk '{print $4}')
+for ligne in $soumissions; do
+    IFS='|' read -r id file exercise language <<< "$ligne"
 
-    filepath="$UPLOAD_DIR/$filename"
-    ref_file="$REF_DIR/exo${exercise}.out"
+    echo "$(date "+%F %T") Soumission #$id : $file sur exo $exercise ($language)" >> "$LOG_FILE"
 
-    # Vérification des fichiers
-    if [[ ! -f "$filepath" ]]; then
+    # === Dossier de travail temporaire ===
+    WDIR="$TMP_BASE/task_$id"
+    mkdir -p "$WDIR"
+
+    if [ ! -f "$UPLOAD_DIR/$file" ]; then
+        echo "$(date "+%F %T") Fichier '$file' introuvable dans $UPLOAD_DIR" >> "$LOG_FILE"
         mysql -u"$DB_USER" -p"$DB_PASS" -h"$DB_HOST" "$DB_NAME" -e \
-        "UPDATE submissions SET status='erreur', commentaire='Fichier introuvable' WHERE id=$id"
+        "UPDATE submissions SET status='erreur', commentaire='Fichier manquant' WHERE id=$id"
         continue
     fi
 
-    if [[ ! -f "$ref_file" ]]; then
-        mysql -u"$DB_USER" -p"$DB_PASS" -h"$DB_HOST" "$DB_NAME" -e \
-        "UPDATE submissions SET status='erreur', commentaire='Fichier de référence inexistant (exo${exercise}.out)' WHERE id=$id"
-        continue
+    cp "$UPLOAD_DIR/$file" "$WDIR/code"
+
+    # === Testeurs ===
+    total_tests=0
+    passed_tests=0
+
+    for infile in "$REF_DIR/exo${exercise}_input_"*.txt; do
+        test_id=$(basename "$infile" | sed -E "s/exo${exercise}_input_([0-9]+)\.txt/\1/")
+        outfile="$REF_DIR/exo${exercise}_output_${test_id}.txt"
+        [[ -f "$outfile" ]] || continue
+
+        total_tests=$((total_tests + 1))
+        output_file="$WDIR/output_${test_id}.txt"
+        error_file="$WDIR/error_${test_id}.txt"
+
+        case "$language" in
+            "C")
+                mv "$WDIR/code" "$WDIR/prog.c"
+                gcc "$WDIR/prog.c" -o "$WDIR/exe" 2>"$error_file"
+                if [ $? -eq 0 ]; then
+                    timeout 2s bash -c "cd $WDIR && ulimit -t 2; ./exe < $infile > $output_file" 2>>"$error_file"
+                fi
+                ;;
+            "Python")
+                mv "$WDIR/code" "$WDIR/code.py"
+                timeout 2s bash -c "cd $WDIR && ulimit -t 2; python3 code.py < $infile > $output_file" 2>"$error_file"
+                ;;
+            *)
+                mysql -u"$DB_USER" -p"$DB_PASS" -h"$DB_HOST" "$DB_NAME" -e \
+                "UPDATE submissions SET status='erreur', commentaire='Langage non supporté' WHERE id=$id"
+                rm -rf "$WDIR"
+                continue 2
+                ;;
+        esac
+
+        diff -q "$output_file" "$outfile" > /dev/null && passed_tests=$((passed_tests + 1))
+    done
+
+    # === Résultat final ===
+    if [[ $total_tests -eq 0 ]]; then
+        note=0
+        commentaire="Aucun test trouvé pour l'exercice $exercise."
+        status="erreur"
+    else
+        pourcentage=$(( 100 * passed_tests / total_tests ))
+        note=$(( 20 * passed_tests / total_tests ))
+        commentaire="$passed_tests / $total_tests tests passés ($pourcentage%)"
+        status="corrige"
     fi
 
-    echo "Traitement soumission #$id - $filename ($language)" >> "$LOG_FILE"
+    # Échapper les éventuels caractères spéciaux
+    commentaire_sql=$(printf "%s" "$commentaire" | sed "s/'/''/g")
 
-    # Préparation du dossier temporaire
-    rm -rf "$TMP_DIR/*"
-    cp "$filepath" "$TMP_DIR/code"
-
-    run_output="$TMP_DIR/output.txt"
-    run_error="$TMP_DIR/error.txt"
-    ref_output="$ref_file"
-
-    NOTE=0
-    COMMENTAIRE=""
-
-    case "$language" in
-        "C")
-            mv "$TMP_DIR/code" "$TMP_DIR/code.c"
-            gcc "$TMP_DIR/code.c" -o "$TMP_DIR/exe" 2>>"$run_error"
-            if [[ $? -ne 0 ]]; then
-                COMMENTAIRE="Erreur compilation C"
-                STATUS="erreur"
-            else
-                timeout 2s "$TMP_DIR/exe" > "$run_output" 2>>"$run_error"
-                if [[ $? -ne 0 ]]; then
-                    COMMENTAIRE="Erreur d'exécution (boucle ou crash)"
-                    STATUS="erreur"
-                else
-                    if diff -q "$run_output" "$ref_output" > /dev/null; then
-                        NOTE=20
-                        COMMENTAIRE="Programme C correct"
-                        STATUS="corrige"
-                    else
-                        NOTE=10
-                        COMMENTAIRE="Résultat incorrect pour exercice $exercise"
-                        STATUS="corrige"
-                    fi
-                fi
-            fi
-            ;;
-        "Python")
-            mv "$TMP_DIR/code" "$TMP_DIR/code.py"
-            timeout 2s python3 "$TMP_DIR/code.py" > "$run_output" 2>>"$run_error"
-            if [[ $? -ne 0 ]]; then
-                COMMENTAIRE="❌ Erreur exécution Python"
-                STATUS="erreur"
-            else
-                if diff -q "$run_output" "$ref_output" > /dev/null; then
-                    NOTE=20
-                    COMMENTAIRE="Script Python correct"
-                    STATUS="corrige"
-                else
-                    NOTE=10
-                    COMMENTAIRE="Résultat incorrect pour exercice $exercise"
-                    STATUS="corrige"
-                fi
-            fi
-            ;;
-        *)
-            COMMENTAIRE="Langage non supporté"
-            STATUS="erreur"
-            ;;
-    esac
-
-    # Mettre à jour la base
-    # Échapper les caractères spéciaux dans les commentaires
-    COMSQL=$(echo "$COMMENTAIRE" | sed "s/'/\\\\'/g")
-
+    # === Mise à jour SQL ===
     mysql -u"$DB_USER" -p"$DB_PASS" -h"$DB_HOST" "$DB_NAME" -e \
-    "UPDATE submissions SET status='$STATUS', note=$NOTE, commentaire='$COMSQL' WHERE id=$id"
+    "UPDATE submissions SET status='$status', note=$note, commentaire='$commentaire_sql' WHERE id=$id"
 
-    echo "📦 Soumission #$id traitée – Status: $STATUS – Note: $NOTE" >> "$LOG_FILE"
+    echo "$(date "+%F %T") Correction #$id : $note/20 - $commentaire" >> "$LOG_FILE"
 
+    # === Nettoyage ===
+    rm -rf "$WDIR"
+    rm -f "$UPLOAD_DIR/$file"
 done
 
-echo "Traitement terminé – $(date)" >> "$LOG_FILE"
+echo "$(date "+%F %T") Fin de cycle de correction" >> "$LOG_FILE"

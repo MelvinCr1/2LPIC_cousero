@@ -3,10 +3,10 @@ session_start();
 require_once("config.php");
 
 // Vérifier si l'étudiant est connecté
-if (!isset($_SESSION['id_etudiant'])) {
-    header("Location: login.php");
-    exit;
-}
+//if (!isset($_SESSION['id_etudiant'])) {
+//    header("Location: login.php");
+//    exit;
+//}
 
 $id_etudiant = $_SESSION['id_etudiant'];
 

@@ -1,9 +1,9 @@
 <?php
 session_start();
-if (!isset($_SESSION['etudiant_id'])) {
-    header("Location: login.php");
-    exit();
-}
+//if (!isset($_SESSION['etudiant_id'])) {
+//    header("Location: login.php");
+//    exit();
+//}
 
 $etudiant_id = $_SESSION['etudiant_id'];
 $course      = $_POST['course'] ?? '';
@@ -14,7 +14,7 @@ if (
     empty($course) || empty($exercise) || empty($language) ||
     !isset($_FILES['codefile']) || $_FILES['codefile']['error'] !== UPLOAD_ERR_OK
 ) {
-    header("Location: upload.php?message=❌ Erreur dans l’envoi");
+    header("Location: upload.php?message=Erreur dans l’envoi");
     exit();
 }
 
@@ -33,7 +33,7 @@ $filepath = $upload_dir . "/" . $filename;
 
 // Déplacement du fichier
 if (!move_uploaded_file($_FILES['codefile']['tmp_name'], $filepath)) {
-    header("Location: upload.php?message=❌ Erreur lors de l’enregistrement du fichier");
+    header("Location: upload.php?message=Erreur lors de l’enregistrement du fichier");
     exit();
 }
 
@@ -52,5 +52,5 @@ $stmt->execute();
 $stmt->close();
 $conn->close();
 
-header("Location: upload.php?message=✅ Fichier envoyé avec succès !");
+header("Location: upload.php?message=Fichier envoyé avec succès !");
 exit();

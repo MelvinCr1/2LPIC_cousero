@@ -1,11 +1,6 @@
 <?php
 session_start();
 
-// Affichage d'erreurs pour debug (à désactiver en production)
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 // Connexion base de données
 $mysqli = new mysqli("192.168.146.103", "webuser", "webpassword", "corrections");
 if ($mysqli->connect_error) {
