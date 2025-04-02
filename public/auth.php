@@ -1,59 +1,64 @@
 <?php
 session_start();
 
-// Segfault préventif : vérifier que la requête est bien envoyée par POST
+// === Sécurité : vérifier que la requête vient bien d'un formulaire POST ===
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: login.php');
+    header('Location: login.php?error=Requête invalide.');
     exit();
 }
 
-// Récupération sécurisée des données du formulaire
-$email    = $_POST['email']    ?? '';
-$password = $_POST['password'] ?? '';
+// === Connexion à la BDD ===
+$mysqli = new mysqli("192.168.146.103", "webuser", "webpassword", "corrections");
 
-// 1. Vérifier que les deux champs sont fournis
+if ($mysqli->connect_error) {
+    error_log("Connexion MySQL échouée : " . $mysqli->connect_error);
+    header("Location: login.php?error=Erreur de connexion à la base.");
+    exit();
+}
+
+// === Récupération et nettoyage des données ===
+$email = trim($_POST['email'] ?? '');
+$password = trim($_POST['password'] ?? '');
+
 if (empty($email) || empty($password)) {
     header("Location: login.php?error=Champs manquants.");
     exit();
 }
 
-// 2. Connexion à la base de données
-$conn = new mysqli("192.168.146.103", "webuser", "webpassword", "corrections");
+// === Préparation de la requête ===
+$stmt = $mysqli->prepare("SELECT id, password FROM etudiants WHERE email = ?");
 
-if ($conn->connect_error) {
-    error_log("Connexion échouée : " . $conn->connect_error);
-    header("Location: login.php?error=Erreur de connexion.");
+if (!$stmt) {
+    error_log("Erreur requête SQL (prepare) : " . $mysqli->error);
+    header("Location: login.php?error=Erreur interne (requête).");
     exit();
 }
 
-// 3. Préparer la requête sécurisée (anti-injection SQL) 🛡️
-$stmt = $conn->prepare("SELECT id, password FROM etudiants WHERE email = ?");
 $stmt->bind_param("s", $email);
 $stmt->execute();
 $stmt->store_result();
 
-// 4. Vérifier si un compte existe avec cet email
 if ($stmt->num_rows === 0) {
+    // Aucun utilisateur trouvé
     header("Location: login.php?error=Adresse email inconnue.");
     exit();
 }
 
-// 5. Récupérer l'id et le mot de passe hashé
-$stmt->bind_result($etudiant_id, $hashed_password);
+$stmt->bind_result($user_id, $hashed_password);
 $stmt->fetch();
+$stmt->close();
+$mysqli->close();
 
-// 6. Vérification du mot de passe
+// === Vérification du mot de passe (recommandé avec password_hash) ===
 if (!password_verify($password, $hashed_password)) {
-    header("Location: login.php?error=Mot de passe incorrect.");
+    header("Location: login.php?error=Mot de passe invalide.");
     exit();
 }
 
-$stmt->close();
-$conn->close();
+// === Connexion réussie ===
+$_SESSION['etudiant_id'] = $user_id;
+session_regenerate_id(true);  // Sécurité contre session fixation
 
-// 7. Authentification réussie → Lancer la session de l’étudiant
-$_SESSION['etudiant_id'] = $etudiant_id;
-
-// 8. Redirection vers le tableau de bord
 header("Location: dashboard.php");
 exit();
+?>
