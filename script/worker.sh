@@ -120,7 +120,7 @@ for ligne in $soumissions; do
         commentaire="Aucun test prévu pour exercice $exercise."
         status="erreur"
     else
-        note=$(( 100 * ok / total ))
+        note=$(( 20 * ok / total ))
         status="corrige"
         commentaire="$ok / $total tests réussis. Score : $note%.\n$commentaire"
     fi
