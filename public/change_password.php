@@ -1,17 +1,27 @@
 <?php
-session_start();
-//if (!isset($_SESSION['etudiant_id'])) {
-//    header("Location: login.php?error=Veuillez vous connecter.");
-//    exit();
-//}
+require_once("jwt_utils.php");
 
+// Récupération du token (transmis par URL)
+$token = $_GET['token'] ?? null;
 $message = "";
 
+if (!$token || !is_jwt_valid($token)) {
+    die("Token invalide ou expiré. <br><a href='login.php'>Se reconnecter</a>");
+}
+
+// Extraire l’ID étudiant du token
+$payload = get_payload_from_jwt($token);
+$etudiant_id = $payload['etudiant_id'] ?? null;
+
+if (!$etudiant_id) {
+    die("Impossible d’extraire l’identifiant étudiant.");
+}
+
+// Traitement du formulaire de modification de mot de passe
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $etudiant_id = $_SESSION['etudiant_id'];
-    $ancien      = trim($_POST['ancien'] ?? '');
-    $nouveau     = trim($_POST['nouveau'] ?? '');
-    $confirmation = trim($_POST['confirmation'] ?? '');
+    $ancien        = trim($_POST['ancien'] ?? '');
+    $nouveau       = trim($_POST['nouveau'] ?? '');
+    $confirmation  = trim($_POST['confirmation'] ?? '');
 
     if ($ancien === '' || $nouveau === '' || $confirmation === '') {
         $message = "Tous les champs sont obligatoires.";
@@ -24,23 +34,31 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             die("Erreur de connexion : " . $conn->connect_error);
         }
 
-        $stmt = $conn->prepare("SELECT id FROM etudiants WHERE id = ? AND password = PASSWORD(?)");
-        $stmt->bind_param("is", $etudiant_id, $ancien);
+        // Vérifier l'ancien mot de passe
+        $stmt = $conn->prepare("SELECT password FROM etudiants WHERE id = ?");
+        $stmt->bind_param("i", $etudiant_id);
         $stmt->execute();
-        $stmt->store_result();
+        $stmt->bind_result($hashed_password);
+        $stmt->fetch();
+        $stmt->close();
 
-        if ($stmt->num_rows === 1) {
-            $stmt->close();
-            $update = $conn->prepare("UPDATE etudiants SET password = PASSWORD(?) WHERE id = ?");
-            $update->bind_param("si", $nouveau, $etudiant_id);
+        if (!password_verify($ancien, $hashed_password)) {
+            $message = "Ancien mot de passe incorrect.";
+        } else {
+            // Hachage du nouveau mot de passe
+            $nouveau_hash = password_hash($nouveau, PASSWORD_DEFAULT);
+
+            // Mise à jour en base
+            $update = $conn->prepare("UPDATE etudiants SET password = ? WHERE id = ?");
+            $update->bind_param("si", $nouveau_hash, $etudiant_id);
+
             if ($update->execute()) {
                 $message = "Mot de passe modifié avec succès.";
             } else {
                 $message = "Erreur lors de la mise à jour.";
             }
+
             $update->close();
-        } else {
-            $message = "Ancien mot de passe incorrect.";
         }
 
         $conn->close();
@@ -131,7 +149,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <body>
 
 <div class="container">
-    <h2>🔐 Modifier le mot de passe</h2>
+    <h2>Modifier le mot de passe</h2>
 
     <?php if ($message): ?>
         <div class="msg <?= str_starts_with($message, '✅') ? 'success' : 'error' ?>">
@@ -146,7 +164,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <button type="submit">Modifier</button>
     </form>
 
-    <a href="dashboard.php">⬅ Retour au tableau de bord</a>
+    <a href="dashboard.php?token=<?= urlencode($token) ?>">⬅ Retour au tableau de bord</a>
 </div>
 
 </body>

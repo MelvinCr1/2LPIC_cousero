@@ -1,45 +1,44 @@
 <?php
-session_start();
+// Session plus utilisée ici, mais on active les erreurs
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-// === Sécurité : vérifier que la requête vient bien d'un formulaire POST ===
+// Inclure les fonctions JWT (assure-toi que ce fichier existe)
+require_once 'jwt_utils.php';
+
+// === Vérification méthode POST ===
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: login.php?error=Requête invalide.');
     exit();
 }
 
-// === Connexion à la BDD ===
+// === Connexion MySQL ===
 $mysqli = new mysqli("192.168.146.103", "webuser", "webpassword", "corrections");
 
 if ($mysqli->connect_error) {
     error_log("Connexion MySQL échouée : " . $mysqli->connect_error);
-    header("Location: login.php?error=Erreur de connexion à la base.");
+    header("Location: login.php?error=Erreur connexion BDD.");
     exit();
 }
 
-// === Récupération et nettoyage des données ===
-$email = trim($_POST['email'] ?? '');
+// === Récupération des données ===
+$email    = trim($_POST['email'] ?? '');
 $password = trim($_POST['password'] ?? '');
 
 if (empty($email) || empty($password)) {
-    header("Location: login.php?error=Champs manquants.");
+    header("Location: login.php?error=Champs requis manquants.");
     exit();
 }
 
-// === Préparation de la requête ===
+// === Préparation de l'identifiant ===
 $stmt = $mysqli->prepare("SELECT id, password FROM etudiants WHERE email = ?");
-
-if (!$stmt) {
-    error_log("Erreur requête SQL (prepare) : " . $mysqli->error);
-    header("Location: login.php?error=Erreur interne (requête).");
-    exit();
-}
-
 $stmt->bind_param("s", $email);
 $stmt->execute();
 $stmt->store_result();
 
 if ($stmt->num_rows === 0) {
-    // Aucun utilisateur trouvé
+    // Email inconnu
     header("Location: login.php?error=Adresse email inconnue.");
     exit();
 }
@@ -49,16 +48,16 @@ $stmt->fetch();
 $stmt->close();
 $mysqli->close();
 
-// === Vérification du mot de passe (recommandé avec password_hash) ===
+// === Vérification du mot de passe ===
 if (!password_verify($password, $hashed_password)) {
-    header("Location: login.php?error=Mot de passe invalide.");
+    header("Location: login.php?error=Mot de passe incorrect.");
     exit();
 }
 
-// === Connexion réussie ===
-$_SESSION['etudiant_id'] = $user_id;
-session_regenerate_id(true);  // Sécurité contre session fixation
+// Authentification réussie : générer un JWT
+$jwt = generate_jwt(['etudiant_id' => $user_id]);
 
-header("Location: dashboard.php");
+// Redirection avec le token dans l'URL
+header("Location: dashboard.php?token=" . urlencode($jwt));
 exit();
 ?>

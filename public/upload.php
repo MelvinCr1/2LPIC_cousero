@@ -1,11 +1,22 @@
 <?php
-session_start();
-//if (!isset($_SESSION['etudiant_id'])) {
-//    header("Location: login.php?error=Veuillez vous connecter.");
-//    exit();
-//}
+require_once("jwt_utils.php");
 
+// 1. Récupérer le token JWT depuis l'URL
+$token = $_GET['token'] ?? null;
 $message = $_GET['message'] ?? '';
+
+// 2. Vérification que le token est valide
+if (!$token || !is_jwt_valid($token)) {
+    die("Token invalide ou expiré.<br><a href='login.php'>Se reconnecter</a>");
+}
+
+// 3. Récupération de l’ID étudiant (pour propagation ou affichage)
+$payload = get_payload_from_jwt($token);
+$etudiant_id = $payload['etudiant_id'] ?? null;
+
+if (!$etudiant_id) {
+    die("Étudiant non reconnu dans le token.");
+}
 ?>
 
 <!DOCTYPE html>
@@ -72,13 +83,15 @@ $message = $_GET['message'] ?? '';
 <body>
 
 <div class="container">
-    <h2>Dépôt d’un exercice</h2>
+    <h2>Dépôt d'un exercice</h2>
 
     <?php if ($message): ?>
         <div class="msg"><?= htmlspecialchars($message); ?></div>
     <?php endif; ?>
 
     <form action="process_upload.php" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="token" value="<?= htmlspecialchars($token) ?>">
+
         <label for="course">Cours :</label>
         <select name="course" required>
             <option value="">-- Choisir --</option>
@@ -102,7 +115,7 @@ $message = $_GET['message'] ?? '';
         <button type="submit">Envoyer</button>
     </form>
 
-    <a href="dashboard.php">⬅ Retour au tableau de bord</a>
+    <a href="dashboard.php?token=<?= urlencode($token) ?>">Retour au tableau de bord</a>
 </div>
 
 </body>

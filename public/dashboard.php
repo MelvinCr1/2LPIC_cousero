@@ -1,9 +1,25 @@
 <?php
-session_start();
-//if (!isset($_SESSION['etudiant_id'])) {
-//    header("Location: login.php?error=Veuillez vous connecter.");
-//    exit();
-//}
+require_once 'jwt_utils.php';
+
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// 1. Récupérer le token JWT depuis l'URL (GET)
+$token = $_GET['token'] ?? null;
+
+// 2. Vérification : existe et est valide ?
+if (!$token || !is_jwt_valid($token)) {
+    die("Accès refusé. Token invalide ou expiré.<br><a href='login.php'>Retour à la connexion</a>");
+}
+
+// 3. Extraire l'identité de l'étudiant depuis le token
+$payload = get_payload_from_jwt($token);
+$etudiant_id = $payload['etudiant_id'] ?? null;
+
+if (!$etudiant_id) {
+    die("Impossible d’extraire l'identifiant depuis le token.");
+}
 ?>
 
 <!DOCTYPE html>
@@ -65,13 +81,13 @@ session_start();
 
 <div class="dashboard-container">
     <h1>Bienvenue étudiant 👋</h1>
-    <p>ID de session : <strong><?php echo $_SESSION['etudiant_id']; ?></strong></p>
+    <p>Identifiant : <strong><?= htmlspecialchars($etudiant_id); ?></strong></p>
 
     <div class="actions">
-        <a href="upload.php">Déposer un fichier</a>
-        <a href="soumissions.php">Mes soumissions</a>
-        <a href="change_password.php">Changer mon mot de passe</a>
-        <a href="logout.php" class="logout">Se déconnecter</a>
+        <a href="upload.php?token=<?= urlencode($token) ?>">Déposer un fichier</a>
+        <a href="soumissions.php?token=<?= urlencode($token) ?>">Mes soumissions</a>
+        <a href="change_password.php?token=<?= urlencode($token) ?>">Changer mon mot de passe</a>
+        <a href="logout.php">Se déconnecter</a>
     </div>
 </div>
 
