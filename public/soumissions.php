@@ -37,33 +37,84 @@ $result = $stmt->get_result();
     <meta charset="UTF-8">
     <title>Mes soumissions</title>
     <style>
-        table {
-            border-collapse: collapse;
-            width: 90%;
-            margin: 20px auto;
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f3f3f3;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
+
+        .container {
+            margin-top: 60px;
+            width: 90%;
+            max-width: 1000px;
+            background: #fff;
+            padding: 40px 50px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
         th, td {
-            border: 1px solid #bbb;
-            padding: 10px;
+            border: 1px solid #ccc;
+            padding: 14px;
             text-align: center;
         }
+
         th {
-            background-color: #eee;
+            background-color: #f0f0f0;
         }
+
         .status-en_attente {
             color: orange;
+            font-weight: bold;
         }
+
         .status-corrige {
             color: green;
+            font-weight: bold;
         }
+
         .status-erreur {
             color: red;
+            font-weight: bold;
+        }
+
+        .back-link {
+            display: block;
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .back-link a {
+            color: #4caf50;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .back-link a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
-    <h2 style="text-align:center">Mes soumissions</h2>
-    <p style="text-align:center"><a href="dashboard.php?token=<?= urlencode($token) ?>">← Retour au tableau de bord</a></p>
+
+<div class="container">
+    <h2>📄 Mes soumissions</h2>
 
     <table>
         <thead>
@@ -83,9 +134,7 @@ $result = $stmt->get_result();
                     <td><?= htmlspecialchars($row['id']) ?></td>
                     <td><a href="uploads/<?= htmlspecialchars(basename($row['filename'])) ?>" target="_blank"><?= htmlspecialchars($row['filename']) ?></a></td>
                     <td><?= htmlspecialchars($row['submitted_at']) ?></td>
-                    <td class="status-<?= htmlspecialchars($row['status']) ?>">
-                        <?= ucwords(str_replace("_", " ", $row['status'])) ?>
-                    </td>
+                    <td class="status-<?= htmlspecialchars($row['status']) ?>"><?= ucwords(str_replace("_", " ", $row['status'])) ?></td>
                     <td><?= is_null($row['note']) ? "-" : $row['note'] . "/20" ?></td>
                     <td><?= htmlspecialchars($row['commentaire'] ?? "") ?></td>
                 </tr>
@@ -95,6 +144,11 @@ $result = $stmt->get_result();
         <?php endif; ?>
         </tbody>
     </table>
+
+    <div class="back-link">
+        <a href="dashboard.php?token=<?= urlencode($token) ?>">← Retour au tableau de bord</a>
+    </div>
+</div>
 
 </body>
 </html>
