@@ -32,11 +32,12 @@ Les fichiers exécutables peuvent être testés via des scripts (modulable).
 ## 3. Guide d'installation
 
 ### 3.1 - Prérequis
-Installation des VMs avec le logiciel de virtualisation de votre choix (Vmware Workstation Pro utilisé pour ce projet)
-Lien des VMs : https://mega.nz/folder/6d9Akb4D#rMqQIehODLRE7Faj2DKcpw
+Installation des VMs avec le logiciel de virtualisation de votre choix (Vmware Workstation Pro utilisé pour ce projet)<br>
+Lien des VMs : https://mega.nz/folder/6d9Akb4D#rMqQIehODLRE7Faj2DKcpw 
+<br>
 /!\ Il faudra penser à configurer l'ensemble des VMs au sein d'un réseau et de modifier si besoin les IPs des machines /!\
 
-PHP ≥ 7.4
+PHP ≥ 7.4<br>
 MySQL / MariaDB
 
 ### 3.2 - Installation
