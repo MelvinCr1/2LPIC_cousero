@@ -32,7 +32,10 @@ Les fichiers exécutables peuvent être testés via des scripts (modulable).
 ## 3. Guide d'installation
 
 ### 3.1 - Prérequis
-Serveur web local (Apache recommandé)
+Installation des VMs avec le logiciel de virtualisation de votre choix (Vmware Workstation Pro utilisé pour ce projet)
+Lien des VMs : https://mega.nz/folder/6d9Akb4D#rMqQIehODLRE7Faj2DKcpw
+/!\ Il faudra penser à configurer l'ensemble des VMs au sein d'un réseau et de modifier si besoin les IPs des machines /!\
+
 PHP ≥ 7.4
 MySQL / MariaDB
 
@@ -44,7 +47,7 @@ MySQL / MariaDB
 
 ### 3.3 - Tests
 Accédez à http://localhost/coursero/ via un navigateur.
-Créez un compte étudiant manuellement dans la base de données ou via interface si disponible.
+Créez un compte étudiant manuellement dans la base de données ou via la page /register.php.
 
 ## Technologies utilisées
 * Frontend : HTML / CSS / JavaScript
@@ -55,7 +58,6 @@ Créez un compte étudiant manuellement dans la base de données ou via interfac
 ## 5. Authors
 
 * **Melvin Cureau** - [MelvinCureau](https://github.com/MelvinCr1)
-* **Tommy Brisset** - [TommyBrisset](https://github.com/TommyBRISSET)
 
 ## 6. Licence
 
